@@ -1,66 +1,71 @@
 # Encode Once, Enhance Everywhere
 
-**George Mason University CS491 capstone | Fall 2026 - Spring 2027 | Sponsored by Ofinno**
+**George Mason University CS491 | Fall 2026 - Spring 2027 | Sponsored by Ofinno**
 
-Build an offline video delivery pipeline that produces multiple output profiles from one stored package of standard video encodes and pretrained enhancement models. Measure when neural enhancement improves on ordinary bicubic upscaling, and what that improvement costs.
+Build an offline video delivery pipeline that combines a compact encoded base with pretrained neural enhancement. Measure **how much neural enhancement improves quality over bicubic upscaling, on which content, and at what compute cost**.
 
-## Project status
+[Read the project one-pager (PDF)](project-2-one-pager-public-v1.0.pdf)
 
-Project setup is underway. This repository currently contains introductory documentation; application code, installation steps, and runnable examples will be added as the team develops the prototype. Features below describe the agreed project scope, not completed functionality.
+**Status:** Project setup. Implementation, installation commands and results will be added as the team develops the pipeline. Values illustrated in the one-pager are examples, not measured project results. The accepted sponsor RFP defines the detailed requirements.
 
 ## What we are building
 
 | Component | Purpose |
 | --- | --- |
-| Packager | Encode compact base rungs and write a manifest containing measured enhancement options and costs. |
-| Delivery compiler | Select a base rung and enhancement chain for each segment under a device and bandwidth budget. |
-| Comparison interface | Show outputs side by side at matched delivered bitrate, with quality and performance measurements. |
-| Evaluation harness | Reproduce benchmark results and figures with one command. |
+| Packager | Encode compact base representations, measure segments and produce a manifest. |
+| Compiler | Select a base and enhancement chain for each segment within a device compute budget. |
+| Comparison interface | Show the selected outputs and their quality/cost tradeoffs. |
+| Evaluation harness | Reproduce the three anchors, metrics and comparison report. |
 
-Every quality comparison includes three anchors at matched delivered bitrate:
+The expected stack is Python, FFmpeg/x265, VMAF and pretrained inference models, with ONNX Runtime where appropriate. Record the exact model, tool and configuration versions used.
 
-1. Direct encode at the output resolution.
-2. Low-resolution base encode plus bicubic upscaling.
-3. Low-resolution base encode plus neural enhancement.
+## Evaluation approach
 
-The key result is the gain of anchor 3 over anchor 2, reported by content genre alongside compute cost. Report VMAF and VMAF-NEG together, with PSNR as a sanity check. Pin encoder settings and record measured bitrate, reference-machine details, and model versions.
+Compare these three anchors at matched delivered bits:
 
-## Delivery tiers
+1. Direct encoding at the target resolution.
+2. A lower-resolution base followed by bicubic upscaling.
+3. A lower-resolution base followed by neural enhancement.
 
-- **Tier 1: proof of concept.** Encode two base resolutions, apply a fixed allowlisted enhancement chain, generate at least two output profiles, and evaluate all three anchors at three or more rate points per clip. Produce reproducible rate-quality curves and BD-rate results against bicubic.
-- **Tier 2: minimum viable product.** Add measured per-segment decisions, stable switching between enhancement chains, the comparison interface, and a reproducible report including packaging cost.
-- **Tier 3: stretch work.** Select advanced capabilities with the sponsor, such as optimized inference, short-form output, or a quality-compute frontier study.
+The key comparison is **neural versus bicubic**, not only neural versus direct encoding. Report VMAF and VMAF-NEG alongside PSNR, inference cost and the test-machine configuration. Pin encoding settings, use at least three rate points per clip, and produce rate-quality curves and BD-rate comparisons against the bicubic anchor. Report results by content genre.
 
-Fall emphasizes learning, baseline measurements, and validating approaches. Spring focuses on implementation, integration, and the final demonstration. The RFP remains the detailed technical acceptance specification; agree project checkpoints and provisional targets with the technical contacts.
+## Scope and success criteria
 
-## Course milestones
+- **Tier 1: End-to-end PoC.** Base encoding and a fixed allowlisted enhancement chain, at least two output profiles, all three anchors and reproducible first curves.
+- **Tier 2: MVP.** Measured per-segment cost tables drive content-adaptive selection, with stable switching, a comparison interface and reproducible reports. Report packaging cost separately.
+- **Tier 3: Extensions.** Explore optimized or real-time inference, short-form output, per-genre frontiers or streaming packaging after the MVP works.
 
-| Date | Milestone |
-| --- | --- |
-| October 2, 2026 | Proof of Concept Proposal: high-level design and project plan |
-| November 20, 2026 | Proof of Concept Report; send to sponsor and copy faculty |
-| December 4, 2026 | Interim Program Review (IPR) class presentation and Spring implementation proposal |
-| April 30, 2027 | Final demonstration |
-
-Students separately schedule a 30-60 minute sponsor review for the interim and final presentations. Course dates follow the Fall 2026 syllabus and Larry Bailey's September 8 clarification; follow subsequent instructor updates. Regular sponsor meetings are planned every two weeks for 30 minutes, with exact slots agreed by the team and both technical contacts.
+Fall focuses on learning, baseline validation, the PoC and Spring plan. Spring develops and integrates the MVP. Tier 1/2 operate offline with pretrained models; training, fine-tuning, frame interpolation and custom codec development are outside this scope.
 
 ## Getting started
 
-1. Read the sponsor RFP and the current course syllabus.
-2. Confirm the reference-machine specification, test clips, model allowlist, and cost-table format with the technical contacts.
-3. Establish a Python-first toolchain using FFmpeg/x265, the reference VMAF implementation, and an inference runtime such as ONNX Runtime.
-4. Reproduce the three-anchor comparison on a small test case before expanding the benchmark.
-5. Add exact installation, execution, and reproduction commands to this README as code becomes available.
+1. Review the RFP and course syllabus with the team.
+2. Confirm the reference machine, licensed clips and pretrained-model allowlist with the project contacts.
+3. Reproduce a small direct-encode and bicubic baseline before adding neural enhancement.
+4. Record dependencies, encoder settings, model licenses and measurement commands.
+5. Add installation instructions and a small repeatable evaluation when code is available.
 
-Processing is offline; Tier 1 and Tier 2 have no real-time requirement. Use pretrained allowlisted models only. Model training, fine-tuning, distillation, custom bitstreams, entropy coding, codec forks, and frame interpolation are outside the agreed scope.
+## Course milestones
 
-## Working together
+| Date | Checkpoint |
+| --- | --- |
+| October 2, 2026 | Project proposal |
+| November 20, 2026 | Proof of concept |
+| December 4, 2026 | Interim Program Review (IPR) and Spring implementation plan |
+| April 30, 2027 | Final demonstration |
 
-Use issues for scoped tasks and pull requests for teammate review. Document assumptions, experiment configurations, and negative results. Keep published work reproducible and use only materials whose licenses permit the intended use and redistribution.
+IPR means **Interim Program Review**, the course progress review. These dates follow the Fall 2026 syllabus and instructor clarification; later course announcements take precedence. The team separately schedules its sponsor review. Plan a 30-minute sponsor meeting every two weeks, with the recurring slot agreed in the project Teams group chat.
 
-**Technical contacts:** Jung-Kyung Lee and Thang Nguyen, Ofinno.  
-**Sponsor contact:** Chia-Yang Tsai, Ofinno.
+## Collaboration and contact
+
+Use the **project Teams group chat** for coordination and sponsor questions. Keep technical tasks, decisions and reproducible bug reports in GitHub Issues; submit changes through pull requests with a short description and validation evidence. Agree on the review workflow with the project contacts.
+
+Ofinno project contacts: **Jung-Kyung and Thang**. Student team: **6 students**.
+
+Sponsor contact: **Chia-Yang Tsai (Ofinno)**. Student contact details and Teams invitation links are not published here.
 
 ## License
 
-The RFP requires the project deliverable to be released under the MIT License. A LICENSE file has not yet been added. Third-party code, models, and datasets retain their own licenses; document those separately.
+Original project code is released under the [MIT License](LICENSE). Contributors retain copyright in their contributions. MIT permits commercial reuse, including use in a startup, subject to its notice requirements.
+
+Third-party code, model weights, datasets and media remain subject to their own licenses. Record their sources and license terms before adding them. The Ofinno name and logo in the sponsor one-pager identify the sponsor; the MIT software license grants no trademark rights or endorsement.
