@@ -33,7 +33,7 @@ Nobody pushes straight to 'main'. Every change goes through a pull request with 
 5. Two teammates review and approve, one of them your review partner. Try to review within 2 days.
 6. After approval, rebase on the latest 'main', check the tests, then use "squash and merge" and delete your branch.
 
-# Other Rules
+## Other Rules
 
 - Trach tasks in Github Issues and liknk the issue in your PR.
 - Never commit video files, model files ('.onnx'), output folders, or passwords and API keys.
