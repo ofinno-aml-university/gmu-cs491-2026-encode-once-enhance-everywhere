@@ -16,7 +16,7 @@ def parse_command_line_arguments():
     """
 
     # initialize argparse object
-    parser = argparse.ArgumentParser(description="Apply ESPCN to a given video file")
+    parser = argparse.ArgumentParser(description="Apply FSRCNN to a given video file")
 
     # add required video input argument
     parser.add_argument(
@@ -136,8 +136,16 @@ def upscale_video(
     """Upscale the video after reading the model and the input video
 
     Args:
+        input_video_path: Path to the video file.
+        output_video_path: Desired name of the upscaled video file
+        model_path: Path to the .pb model file.
+        scale: Integer upscaling factor.
+
     Returns:
-    Raises:"""
+        None
+    Raises:
+        None
+    """
 
     # get the super resolution object
     sr = load_model(model_path, scale)
