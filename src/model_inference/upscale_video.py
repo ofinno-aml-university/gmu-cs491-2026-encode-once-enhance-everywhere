@@ -1,198 +1,90 @@
-import cv2  # currently version 5.0.0 using numpy 2.5.4
-import argparse
-import os
+import cv2  # Version 5.0.0
+import numpy  # Version 2.5.4
+import onnxruntime  # Version 1.31.1
 
 
-def parse_command_line_arguments():
-    """Parse command-line arguments.
-
-    Define the required and optional arguments for the upscaling model.
-
-    Args:
-        none.
-
-    Returns:
-        An argparse.Namespace object that holds the command-line arguments as attributes.
-    """
-
-    # initialize argparse object
-    parser = argparse.ArgumentParser(description="Apply FSRCNN to a given video file")
-
-    # add required video input argument
-    parser.add_argument(
-        "-i",
-        "--input",
-        required=True,
-        type=str,
-        help="The video file to be upscaled",
-    )
-
-    # add optional model selection argument (won't be used until later)
-    parser.add_argument(
-        "-m",
-        "--model",
-        type=str,
-        default="FSRCNN_x2.pb",
-        help=".pb file for the model to use for upscaling",
-    )
-
-    # add output file name argument
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        default="output-video-2x.mp4",
-        help="Desired name of the upscaled video file",
-    )
-
-    # return parsed args
-    return parser.parse_args()
-
-
-def load_model(model_path: str, scale: int):
-    """Initialize the super resolution object.
-
-    Args:
-        model_path: Path to the .pb model file.
-        scale: Integer upscaling factor.
-
-    Returns:
-        The initialized super resolution object with the model loaded.
-
-    Raises:
-        FileNotFoundError: If the .pb file was not found in the given path.
-        ValueError: If the model file is the wrong format.
-    """
-
-    # check if the given path exists
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(
-            f"Model file not found at {os.path.abspath(model_path)}"
-        )
-
-    # check if model file is in correct format
-    if not model_path.endswith(".pb"):
-        raise ValueError("Model file must be in Protocol Buffer (.pb) format")
-
-    # initialize super resolution object
-    sr = cv2.dnn_superres.DnnSuperResImpl_create()
-
-    # try to read the given model
-    try:
-        sr.readModel(model_path)
-        sr.setModel("fsrcnn", scale)
-
-        return sr
-
-    # if OpenCV encounters an error, print it and return none
-    except cv2.error as e:
-        print("[OpenCV Error] Failed to parse or initialize model")
-        print(f"Details: {e}")
-
-        return None
-
-
-def load_video_file(input_video_path: str):
-    """Initialize video capture object and connects a video file to it.
-
-    Args:
-        input_video_path: Path to the video file.
-
-    Returns:
-        The initialized VideoCapture object with the loaded video file.
-
-    Raises:
-        FileNotFoundError: If the video file was not found in the given path.
-        ValueError: If the given file is not a video file.
-    """
-
-    # check if the given path exists
-    if not os.path.exists(input_video_path):
-        raise FileNotFoundError(
-            f"Video file not found at {os.path.abspath(input_video_path)}"
-        )
-
-    # check that given file is in a video format
-    video_extensions = {".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".webm", ".m4v"}
-    _, ext = os.path.splitext(input_video_path)
-    if ext not in video_extensions:
-        raise ValueError(
-            "Input file does not have a video extension (.mp4, .mov, .webm, etc.)"
-        )
-
-    # initialize video capture object with the given video file
-    # return none on error
-    cap = cv2.VideoCapture(input_video_path)
-    if not cap.isOpened():
-        print("[ERROR] Could not open input video.")
-        return None
-
-    return cap
-
-
-def upscale_video(
-    input_video_path: str, output_video_path: str, model_path: str, scale: int
+def upscale_y4m_frames(
+    y_frames: numpy.ndarray,
+    u_frames: numpy.ndarray,
+    v_frames: numpy.ndarray,
+    session: onnxruntime.InferenceSession,
+    scale_factor: int = 2,
 ):
-    """Upscale the video after reading the model and the input video
+    """
+    Upscale YUV (Y4M) frames using FSRCNNX ONNX model.
 
     Args:
-        input_video_path: Path to the video file.
-        output_video_path: Desired name of the upscaled video file
-        model_path: Path to the .pb model file.
-        scale: Integer upscaling factor.
+        y_frames: NumPy array of shape (N, H, W), dtype uint8.
+        u_frames: NumPy array of shape (N, H_uv, W_uv), dtype uint8.
+        v_frames: NumPy array of shape (N, H_uv, W_uv), dtype uint8.
+        session: Initialized onnxruntime inference session object
+        scale_factor: Upscaling factor of the specific FSRCNNX model (typically 2, 3, or 4).
 
     Returns:
-        None
+        Tuple of upscaled (y_out, u_out, v_out) uint8 NumPy arrays.
+
     Raises:
-        None
+        TypeError: If arrays passed in are not NumPy
+        ValueError: If NumPy arrays are invalid due to any of the following:
+            * Frame arrays don't have shape (N, H, W)
+            * Frame arrays don't have matching number of frames
+            * U and V frame arrays don't have matching dimensions
     """
 
-    # get the super resolution object
-    sr = load_model(model_path, scale)
+    # Argument error handling
 
-    # check if model loaded successfully
-    if sr == None:
-        return
+    if not isinstance(y_frames, numpy.ndarray):
+        raise TypeError("y_frames must be a NumPy array")
 
-    # get video capture object
-    cap = load_video_file(input_video_path)
+    if not isinstance(u_frames, numpy.ndarray):
+        raise TypeError("u_frames must be a NumPy array")
 
-    # check if video loaded successfully
-    if cap == None:
-        return
+    if not isinstance(v_frames, numpy.ndarray):
+        raise TypeError("v_frames must be a NumPy array")
 
-    # extract video properties
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    original_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    if y_frames.ndim != 3:
+        raise ValueError("y_frames must have shape (N, H, W)")
 
-    # calculate target dimensions
-    target_width = original_width * scale
-    target_height = original_height * scale
+    if u_frames.ndim != 3 or v_frames.ndim != 3:
+        raise ValueError("U and V frames must have shape (N, H, W)")
 
-    # set up the Video Writer for the upscaled output
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec for .mp4
-    out = cv2.VideoWriter(output_video_path, fourcc, fps, (target_width, target_height))
+    if y_frames.shape[0] != u_frames.shape[0] or y_frames.shape[0] != v_frames.shape[0]:
+        raise ValueError("Y, U, and V must contain the same number of frames")
 
-    while True:
-        # get the next frame
-        ret, frame = cap.read()
-        if not ret:
-            break  # End of video file
+    if u_frames.shape != v_frames.shape:
+        raise ValueError("U and V arrays must have matching dimensions")
 
-        # pass the frame through the FSRCNN neural network
-        upscaled_frame = sr.upsample(frame)
+    input_name = session.get_inputs()[0].name
 
-        # Save the upscaled frame to the output file
-        out.write(upscaled_frame)
+    num_frames, h, w = y_frames.shape
+    _, h_uv, w_uv = u_frames.shape
 
-    # Clean up resources
-    cap.release()
-    out.release()
-    cv2.destroyAllWindows()
+    out_h, out_w = h * scale_factor, w * scale_factor
+    out_h_uv, out_w_uv = h_uv * scale_factor, w_uv * scale_factor
 
+    # Pre-allocate output arrays
+    y_out = numpy.empty((num_frames, out_h, out_w), dtype=numpy.uint8)
+    u_out = numpy.empty((num_frames, out_h_uv, out_w_uv), dtype=numpy.uint8)
+    v_out = numpy.empty((num_frames, out_h_uv, out_w_uv), dtype=numpy.uint8)
 
-if __name__ == "__main__":
-    parsed_args = parse_command_line_arguments()
+    for i in range(num_frames):
+        # Preprocess Y channel: normalize [0, 255] -> [0.0, 1.0] and add batch/channel dims (1, 1, H, W)
+        y_in = y_frames[i].astype(numpy.float32) / 255.0
+        y_in = y_in[numpy.newaxis, numpy.newaxis, :, :]
 
-    upscale_video(parsed_args.input, parsed_args.output, parsed_args.model, 2)
+        # Run ONNX inference on the Y channel
+        y_pred = session.run(None, {input_name: y_in})[0]
+
+        # Postprocess Y channel: remove batch/channel dims, clip, and convert back to uint8
+        y_pred = numpy.squeeze(y_pred)
+        y_out[i] = numpy.clip(y_pred * 255.0, 0, 255).astype(numpy.uint8)
+
+        # Upscale U and V chroma channels using bicubic interpolation
+        u_out[i] = cv2.resize(
+            u_frames[i], (out_w_uv, out_h_uv), interpolation=cv2.INTER_CUBIC
+        )
+        v_out[i] = cv2.resize(
+            v_frames[i], (out_w_uv, out_h_uv), interpolation=cv2.INTER_CUBIC
+        )
+
+    return y_out, u_out, v_out
