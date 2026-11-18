@@ -77,7 +77,7 @@ def upscale_y4m_frames(
 
         # Postprocess Y channel: remove batch/channel dims, clip, and convert back to uint8
         y_pred = numpy.squeeze(y_pred)
-        y_out[i] = numpy.clip(y_pred * 255.0, 0, 255).astype(numpy.uint8)
+        y_out[i] = numpy.rint(numpy.clip(y_pred * 255.0, 0, 255)).astype(numpy.uint8)
 
         # Upscale U and V chroma channels using bicubic interpolation
         u_out[i] = cv2.resize(
