@@ -1,4 +1,33 @@
-# project settings
+# project settings, in TOML.
+# The file name and format are still open; the code reads it with Python's built in tomllib, so changing the name is easy.
+# Every value marked "placeholder" is waiting on the team or Ofinno 
 
 # not in the code
 # format and file name still to be decided
+
+[encoder]
+name = "libx265"
+preset = "medium"
+pix_fmt = "yuv420p"
+bit_depth = 8
+gop_seconds = 2
+scenecut = 0
+open_gop = false
+
+[matching]
+# RFP asks for bitrates matched within 5 percent
+bitrate_tolerance = 0.05
+
+[paths]
+# Relative to the repo root. No drive letters: x265 reads the stats path from a colon seprated string (C: would break it)
+work_dir = "temp"
+
+[[rungs]]
+rung_id = "480p"
+height = 480
+target_bitrate_kbps = 600 #placeholder
+
+[[rungs]]
+rung_id = "720p"
+height = 720
+target_bitrate_kbps = 1500 #placeholder
